@@ -1,0 +1,180 @@
+# Building @SouthBotFunWest, a Twitterbot that Recommends SXSW Parties (Node + Twit)
+
+It's that time of year, when a product manager's thoughts turn to daydrinking and the streets of Austin are turned into a bacchanalia of technology celebrating the almighty God of the Internet &mdash; SXSW (interactive)!
+
+SXSW has been the launching ground for many web businesses that have to gone on to both small and large fame, but none of them can hold a candle to SXSW's own true prodigal son, Twitter, a technology that didn't even launch at the event &mdash; it actually [debuted 9 months earlier](http://mashable.com/2011/03/05/sxsw-launches/) &mdash; but became so popular at the 2008 festival that its fortunes became indelibly associated with the conference.
+
+Twitter has vast appeal as a data source because it's 140-character snippets (and photos) provide an astonishing amount of insight into popular sentiment &mdash; part of the reason it's currently being [archived for future generations](http://www.cnn.com/2010/TECH/04/14/library.congress.twitter/) by the Library of Congress. Twitter is also a fantastic source for programmatic content: NASA has a twitter handle for posting high-definition images from the Hubble Space Telescope daily ([@HubbleDaily](https://twitter.com/hubbledaily)), which proves just about *everyone* is getting on board the twitterbot bandwagon.
+
+With that in mind, let's use Node, everyone's favorite server-side Javascript solution, and `twit`, an npm package that taps into both the streaming and RESTful Twitter APIs, to build a bot that can harness the collective hipness of the twitterati to provide that elusive social shibboleth &mdash; the perfect SXSW party recommendation.
+
+If you haven't already, [install Node and npm](), Node's fantastic package manager. When you've confirmed that they're in your path (an easy way to check is `which node` and `which npm`), create a directory for your project and navigate into it: We'll do this with `mkdir SouthBotFunWest && cd SouthBotFunWest`
+
+Next start a new Node project with `npm init`. You'll be prompted to enter a name and some other particulars, but if you prefer you can just `enter` through every thing.
+
+Now down to business! Our first and only dependency for this project will be `twit`, a Node module for working with the Twitter API. Use the following command to install the module and save it to your `package.json` in one go:
+
+`npm install --save twit`
+
+(If you're getting some weird warnings installing the packages, add `'private': true` to your `package.json` to get rid of them.)
+
+At this point, you'll need to create a twitter profile (in my case, [@SouthBotFunWest]()) and link it to an associated developer account (which you can create at [dev.twitter.com/apps]())
+
+In the directory, create a config file via `config.js` &mdash; this is where we're going to keep our Twitter secret keys and access tokens. Add this to your `.gitignore` file (if you haven't made one yet, there's no time like the present). Your `config.js` should look like this:
+
+````javascript
+module.exports = {
+    consumer_key: "",
+    consumer_secret: "",
+    access_token: "",
+    access_token_secret: ""
+}
+````
+(except with, you know, actual keys and tokens)
+
+To test it all, try a "Hello World!"
+
+````javascript
+var Twit = require('twit');
+var twitInfo = require('./config.js');
+
+var twitter = new Twit(twitInfo);
+
+twitter.post('statuses/update', { status: 'hello world!' }, function(err, data, response) {
+  console.log(data);
+});
+````
+Now trying it with some boilerplate that's more to our liking &mdash; and current purposes
+
+````javascript
+twitter.get('search/tweets', { q: 'banana since:2011-11-11', count: 100 }, function(err, data, response) {
+  console.log(data)
+})
+````
+That's a lot of objects! Let's make some sense of the structure by printing out all the top-level attributes Change `console.log(data)` to
+
+````javascript
+for (attr in data) {
+    console.log(attr);
+}
+````
+Let's modify it to print out the text of all those tweets
+
+````javascript
+var Twit = require('twit');
+var twitInfo = require('./config.js');
+
+var twitter = new Twit(twitInfo);
+
+var tweets;
+
+twitter.get('search/tweets', { q: 'banana since:2011-11-11', count: 100 }, function(err, data, response) {
+  tweets = data.statuses;
+  for (index in tweets) {
+    console.log(tweets[index].text);
+  }
+})
+````
+
+That is a lot of banana talk. Now let's turn to SXSW!
+
+(@SXSWPartyList intro)
+
+````javascript
+twitter.get('statuses/user_timeline', { screen_name: 'SXSWPartyList' }, function(err, data, response) {
+  console.log(data);
+})
+````
+Ah! I feel almost physically assaulted by that much terminal text. Sometimes when you're logging big objects to feel out APIs or better understand data flow, it can be useful to turn the volume down a bit and look at one object at a time. Let's give that another shot:
+
+````javascript
+twitter.get('statuses/user_timeline', { screen_name: 'SXSWPartyList' }, function(err, data, response) {
+  console.log(data[0]);
+})
+````
+Much better. We can see we have a status update, etc
+
+Experimenting with how many statuses we can return
+
+````javascript
+twitter.get('statuses/user_timeline', { screen_name: 'SXSWPartyList', count: 10000 }, function(err, data, response) {
+  console.log(data.length);
+})
+````
+
+Looks like only 199. Blech, that's the pits. But it googling around, it looks like there's a solution: paging through the user_timeline 200 results at a time. In fact, Twitter provides [documentation](https://dev.twitter.com/rest/public/timelines) for people running into precisely this issue.
+
+Let's check out how far back 199 tweets gets us first.
+
+````javscript
+twitter.get('statuses/user_timeline', { screen_name: 'SXSWPartyList', count: 199 }, function(err, data, response) {
+    for (var i=0;i < data.length;i++) {
+        console.log(i + ' ID:' + data[i].id + ' ' + data[i].created_at);
+    }
+})
+````
+It looks like (as of now) the last tweet was February 21st. Let's use max_id and page back to see if we can find a break between posts that refer to SXSW 2015 and SXSW 2014.
+
+````
+82 ID:530144030038827000 Wed Nov 05 23:46:01 +0000 2014
+83 ID:445065696053956600 Sun Mar 16 05:15:05 +0000 2014
+````
+
+That looks like a break to me! Let's change our search to use the `since_id` variable to only return results that are greater (i.e more recent) than that status update made on November 5th, 2014
+
+````javascript
+twitter.get('statuses/user_timeline', { screen_name: 'SXSWPartyList', count: 199, since_id: 530144030038827000 }, function(err, data, response) {
+    for (var i=0;i < data.length;i++) {
+        console.log(i + ' ID:' + data[i].id + ' ' + data[i].created_at);
+    }
+})
+````
+82 isn't that much. Let's try a search instead and broaden our horizon.
+
+````javascript
+var Twit = require('twit');
+var twitInfo = require('./config.js');
+
+var twitter = new Twit(twitInfo);
+
+var musicParties, 
+        interactiveParties, 
+        filmParties;
+
+
+twitter.get('search/tweets', { q: 'SXSW music party ', count: 100 }, function(err, data, response) {
+  musicParties = data.statuses;
+  console.log("MUS" + musicParties[0].text);
+})
+
+twitter.get('search/tweets', { q: 'SXSW interactive party ', count: 100 }, function(err, data, response) {
+  interactiveParties = data.statuses;
+  console.log("INT " + interactiveParties[0].text);
+})
+
+twitter.get('search/tweets', { q: 'SXSW film party ', count: 100 }, function(err, data, response) {
+  filmParties = data.statuses;
+  console.log("FLM" + filmParties[0].text);
+})
+````
+
+FLMRT @NGeistofficial: Salem to host 2015 #SXSW Film Festival opening #party http://t.co/ytDINxCflW #SXSW2015 #SXSWFilm #Salem @SalemWGNA http…
+
+INT RT @Skoop_Events: North of 41 - 5th Annual SxSW Interactive Party
+March 14, 8-11:30pm
+RSVP: http://t.co/DZWA9osAIG
+/#sxsw15 #sxsw #sxsw2015 …
+
+MUSYuuuhhh "@austin360: Ghostface Killah headlines another SXSW party http://t.co/MiAO81rxVm" @sinhalesepolice in atx for sxsw?
+
+Those look roughly like things we might be wanting. Let's refactor our approach to rely on a one-for-one search as opposed to a data aggregation stategy &mdash; which can get messy. Taking this tack, we write a generalized twitter search function that looks like this:
+
+````javascript
+function search (query) {
+    twitter.get('search/tweets', { q: query, count: 1 }, function(err, data, response) {
+      console.log(data.statuses[0].text);
+    })
+}
+`````
+Logging `data.statuses[0].text` is a stand-in right now for later when we'll be posting the tweet.
+
