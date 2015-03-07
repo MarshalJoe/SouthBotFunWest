@@ -1,14 +1,37 @@
 var natural = require('natural'),
   tokenizer = new natural.WordTokenizer();
+var text = "@SouthBotFunWest! Where's some food?";
 
-var text = "hi @SouthBotFunWest, where's a cool party?";
+function matchRE (re, text) {
+	var wordArray = tokenizer.tokenize(text);
+	for(var i=0;i < wordArray.length;i++) {
+		if (re.test(wordArray[i])) {
+			return true;
+		}
+	}
+	return false; 
+}
 
-var wordArray = tokenizer.tokenize(text);
+// RegExes
 var greetingRE = /^hi$/;
+var musicRE = /^music$/;
+var interactiveRE = /^interactive$/;
+var filmRE = /^film$/;
+var foodRE = /^food$/;
+var drinkRE = /^drink$/;
 
-for(var i=0;i < wordArray.length;i++) {
-  if (greetingRE.test(wordArray[i])) {
-    console.log(wordArray[i]);
-    console.log("Sup " + "@person. So, I've heard about some cool South-by parties. You know, whatever [music, interactive, film, free, food, drink]");
-  }
+if (matchRE(interactiveRE, text)) {
+  console.log("interactive")
+} else if (matchRE(filmRE, text)) {
+  console.log("film", text)
+} else if (matchRE(musicRE, text)) {
+  console.log("music")
+} else if (matchRE(drinkRE, text)) {
+  console.log("drink");
+} else if (matchRE(foodRE, text)) {
+  console.log("food")
+} else if (matchRE(greetingRE, text)) {
+	console.log("greeting");
+} else {
+
 }
