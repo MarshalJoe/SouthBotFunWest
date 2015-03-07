@@ -133,7 +133,7 @@ Those look like things we want.
 
 That was a sample of searches intended to aggregate a large database of tweets, that we could then analyze and tweet to people asking for specific types of parties.
 
-But what's the *largest* database of tweets? Twitter!
+But what's the *largest* single database of tweets? Twitter itself!
 
 Let's refactor our approach to rely on a one-for-one search as opposed to a data aggregation stategy &mdash; which can get messy and requires a sizeable back-end. Taking this tack, here's a more generalized twitter search function:
 
@@ -166,9 +166,46 @@ Log out of your bot's profile (if you're logged in of course), log in to another
 
 Now we've got the ability to track (and presumably, respond to, once we implement posting) tweets that mention our bot. The next logical step is putting in place a system to trigger different search queries depending on the content of those tweets.
 
+The easiest way of doing this is with [Regular Expressions](). Regular expressions are basically a self-contained programming language for matching patterns of natural language (e.g. words, expressions) in text. Let's say we want to the bot to respond whenever someone says "hi." That's a perfect use case for regular expressions. First though, let's work on breaking the text of the tweet down word-by-word, so we can use our beginning of line (`^`) and end of line (`$`) operators to signify the beginning and endings of words, as opposed to the body of the tweet. We can do this using the `natural` module and it's word tokenizer function, which takes a body of text and turns it into an array of tokens. Let's install and save it.
 
+`npm install --save natural`
 
+And of course `require()` it in our `index.js` file, then instantiate a new insance of `WordTokenizer()`.
 
+````javascript
+var natural = require('natural'),
+  tokenizer = new natural.WordTokenizer();
+````
+
+Let's try it out. Uncommenting the stream code to prevent the script from hanging, we can log the tokenized version of a typical tweet:
+
+````javascript
+console.log(tokenizer.tokenize("hey @SouthBotFunWest, where's a cool party?"))
+````
+
+`[ 'hey', 'SouthBotFunWest', 'where', 's', 'a', 'cool', 'party' ]`
+
+It comes out in a (nearly) perfect array! It's important to note how the tokenizer captures punctuation (namely, that it doesn't) but this is generally the response that we want. It's time to add the tokenizer to the stream/response code.
+
+Underneath the `console.log(asker + " tweeted: " + text);` in your `stream.on()` callback, add:
+
+````javascript
+  var wordArray = tokenizer.tokenize(text);
+  var greetingRE = /^hi$/;
+
+  for(var i=0;i < wordArray.length;i++) {
+    if (greetingRE.test(wordArray[i])) {
+      console.log(wordArray[i]);
+      console.log("Sup " + "@" + asker + ". So, I've heard about some cool South-by parties. You know, whatever [music, interactive, film, free, food, drink]");
+    }
+  }
+````
+
+This code tokenizes the incoming tweet into an array of words, checks each word to see if it matches "hi," and &mdash; if it does &mdash; prints the word and our response message.  
+
+Try tweeting at your bot from another account with "hi" somewhere in the post. You should see "hi" and our response logged to the terminal!
+
+Recap: We've built a rudimentary search function that returns the text of the first matching tweet and the ability to match various keywords to the posts tweet at @SouthBotFunWest
 
 
 
