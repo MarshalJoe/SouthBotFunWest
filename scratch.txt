@@ -1,9 +1,0 @@
-picture links
-
-![Changing App Permissions](http://i61.tinypic.com/11imwat.png)
-
-![Generating Access Tokens](http://i61.tinypic.com/2ceroz8.png)
-
-![Hello World Tweet](http://i57.tinypic.com/lxy6d.png)
-
-![Successful Response Tweet](http://i62.tinypic.com/seltw0.png)
