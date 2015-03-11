@@ -1,1 +1,1 @@
-Full article: [Building @SouthBotFunWest, a Twitterbot that Recommends SXSW Parties](https://www.airpair.com/posts/review/54fcfe16c1534a0c00e6c839)
+Full article: [Building @SouthBotFunWest, a Twitterbot that Recommends SXSW Parties](https://www.airpair.com/node.js/posts/southbotfunwest-a-twitterbot-that-recommends-sxsw-parties)
